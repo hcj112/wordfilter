@@ -1,0 +1,18 @@
+# This is a TOML document. Boom
+[storage]
+    type = "bolt"
+
+[bolt]
+    path = "keywords.db"
+    blackBucket = "blackBucket"
+    dialTimeout = 1
+
+
+[httpServer]
+    network = "tcp"
+    addr = ":8080"
+	readTimeout = 1
+	writeTimeout = 1
+
+[dictionary]
+    path = "dict.txt,demo.txt"
