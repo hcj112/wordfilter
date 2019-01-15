@@ -15,4 +15,5 @@
 	writeTimeout = 1
 
 [dictionary]
-    path = "dict.txt,demo.txt"
+    dictPath = "dict.txt"
+    keywordPath = "demo.txt"

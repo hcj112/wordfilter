@@ -12,7 +12,7 @@ $ go run main.go -conf=example.toml -dict=dict.txt,demo.txt
 ```
 
 ### Dependencies
-[trie](https://github.com/hcj112/trie)
+[sego](https://github.com/huichen/sego)
 
 [bolt](https://github.com/boltdb/bolt)
 

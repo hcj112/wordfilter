@@ -4,27 +4,28 @@ import (
 	"github.com/hcj112/wordfilter/internal/conf"
 	"github.com/hcj112/wordfilter/internal/storage"
 	"encoding/json"
-	"github.com/hcj112/trie"
 	"strings"
 	"os"
 	"io"
 	"bufio"
+	"github.com/huichen/sego"
+	"unicode/utf8"
 )
+
+const REPLACE_STR = "*"
 
 type Filter struct {
 	c    *conf.Config
 	dao  *storage.Dao
-	trie *trie.Trie
+	sego sego.Segmenter
 }
 
 func New(c *conf.Config) *Filter {
 	f := &Filter{
-		c:    c,
-		dao:  storage.New(c),
-		trie: trie.New(),
+		c:   c,
+		dao: storage.New(c),
 	}
-	go f.loadDict()
-	go f.initBlackBucket()
+	go f.initDictionary()
 	return f
 }
 
@@ -33,29 +34,43 @@ func (f *Filter) Close() {
 }
 
 func (f *Filter) Add(keyword string) (err error) {
-	err = f.dao.Storage.SaveKeyWord(json.RawMessage(keyword))
-	if err != nil {
-		return
-	}
-
-	if !f.trie.HasKeysWithPrefix(keyword) {
-		f.trie.Add(keyword, json.RawMessage(keyword))
-	}
+	key := f.getKey(keyword)
+	err = f.dao.Storage.SaveKeyWord(key)
 	return
 }
 
 func (f *Filter) Remove(keyword string) (err error) {
-	err = f.dao.Storage.DeleteKeyWord(json.RawMessage(keyword))
-	if err != nil {
-		return
-	}
-	f.trie.Remove(keyword)
+	key := f.getKey(keyword)
+	err = f.dao.Storage.DeleteKeyWord(key)
 	return
 }
 
-func (f *Filter) Filter(keyword string) (word string) {
-	word = f.trie.Filter(keyword)
+func (f *Filter) HasExist(keyword string) bool {
+	key := f.getKey(keyword)
+	if word, err := f.dao.Storage.GetKeyWord(key); word != "" && err == nil {
+		return true
+	}
+	return false
+}
+
+func (f *Filter) getKey(keyword string) (key json.RawMessage) {
+	key = json.RawMessage(strings.ToUpper(keyword))
 	return
+}
+
+func (f *Filter) Filter(keyword string) string {
+	bin := []byte(keyword)
+	segments := f.sego.Segment(bin)
+	keywords := make([]byte, 0, len(bin))
+	for _, seg := range segments {
+		word := bin[seg.Start():seg.End()]
+		if f.HasExist(string(word)) {
+			keywords = append(keywords, []byte(strings.Repeat(REPLACE_STR, utf8.RuneCount(word)))...)
+		} else {
+			keywords = append(keywords, word...)
+		}
+	}
+	return string(keywords)
 }
 
 func (f *Filter) List() (keywrods []string, err error) {
@@ -64,24 +79,7 @@ func (f *Filter) List() (keywrods []string, err error) {
 }
 
 func (f *Filter) initBlackBucket() {
-	keywrods, err := f.List()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, keyword := range keywrods {
-		err = f.Add(keyword)
-		if err != nil {
-			continue
-		}
-	}
-}
-
-func (f *Filter) loadDict() {
-	if f.c.Dictionary.Path == "" {
-		return
-	}
-	for _, file := range strings.Split(f.c.Dictionary.Path, ",") {
+	for _, file := range strings.Split(f.c.Dictionary.KeywordPath, ",") {
 		dictFile, err := os.Open(file)
 		defer dictFile.Close()
 
@@ -95,13 +93,24 @@ func (f *Filter) loadDict() {
 			if eof == io.EOF {
 				break
 			}
-			if string(keyword) == "" {
+			word := string(keyword)
+			if word == "" {
 				continue
 			}
-			err := f.Add(string(keyword))
-			if err != nil {
-				continue
+			words := strings.Split(strings.ToUpper(strings.TrimSpace(word)), " ")
+			if words[0] != "" {
+				if err := f.Add(words[0]); err != nil {
+					continue
+				}
 			}
 		}
 	}
+}
+
+/**
+ * 导入分词库
+ */
+func (f *Filter) initDictionary() {
+	f.sego.LoadDictionary(f.c.Dictionary.DictPath)
+	f.initBlackBucket()
 }

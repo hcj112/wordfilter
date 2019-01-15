@@ -8,26 +8,22 @@ import (
 
 var (
 	confPath string
-	dictPath string
 	Conf     *Config
 )
 
 func init() {
 	flag.StringVar(&confPath, "conf", "example.toml", "default config path")
-	flag.StringVar(&dictPath, "dict", "dict.txt", "default dictionary path")
 }
 
 func Init() (err error) {
 	_, err = toml.DecodeFile(confPath, &Conf)
-	if dictPath != "" {
-		Conf.Dictionary.Path = dictPath
-	}
 	return
 }
 
 type Config struct {
 	Storage    *Storage
 	Bolt       *Bolt
+	Mysql      *Mysql
 	HTTPServer *HTTPServer
 	Dictionary *Dictionary
 }
@@ -54,5 +50,6 @@ type HTTPServer struct {
 }
 
 type Dictionary struct {
-	Path string
+	DictPath    string
+	KeywordPath string
 }
