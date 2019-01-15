@@ -8,7 +8,7 @@ go get github.com/hcj112/wordfilter
 
 ```
 $ cd $GOPATH/github.com/hcj112/wordfilter/cmd
-$ go run main.go -conf=example.toml -dict=dict.txt,demo.txt
+$ go run main.go -conf=example.toml
 ```
 
 ### Dependencies
