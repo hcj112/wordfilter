@@ -98,8 +98,8 @@ func (f *Filter) initBlackBucket() {
 				continue
 			}
 			words := strings.Split(strings.ToUpper(strings.TrimSpace(word)), " ")
-			if words[0] != "" {
-				if err := f.Add(words[0]); err != nil {
+			if word = words[0]; word != "" {
+				if err := f.Add(word); err != nil {
 					continue
 				}
 			}
